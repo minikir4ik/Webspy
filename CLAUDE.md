@@ -24,6 +24,13 @@
 - Scraping: Shopify /products.json (free), Keepa API (Amazon), ScraperAPI (generic)
 - Alerts evaluated after each price check, sent via Resend
 
+## Database
+- Schema: supabase/migrations/001_initial_schema.sql (run manually in Supabase SQL Editor)
+- Tables: profiles, projects, tracked_products, price_checks, alert_rules, alert_history
+- RLS enabled on all tables — users only see their own data
+- TypeScript types: src/lib/types/database.ts
+- Auto-creates profile on signup via trigger on auth.users
+
 ## Key Conventions
 - All components in /src/components
 - All lib/utilities in /src/lib
