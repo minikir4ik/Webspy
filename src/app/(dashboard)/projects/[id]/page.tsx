@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AddProductDialog } from "@/components/products/add-product-dialog";
 import { ProductCard } from "@/components/products/product-card";
+import { AutoScrapeProject } from "@/components/products/auto-scrape-project";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Package } from "lucide-react";
@@ -40,6 +41,7 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="space-y-6">
+      <AutoScrapeProject projectId={id} productCount={productList.length} />
       <div>
         <Link href="/projects">
           <Button variant="ghost" size="sm" className="mb-2 -ml-2">

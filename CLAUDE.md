@@ -31,6 +31,15 @@
 - TypeScript types: src/lib/types/database.ts
 - Auto-creates profile on signup via trigger on auth.users
 
+## Scraping Engine
+- Shopify extractor: src/lib/scrapers/shopify.ts (fetches /products/{handle}.json)
+- Generic extractor: src/lib/scrapers/generic.ts (JSON-LD → OG tags → meta tags)
+- Router: src/lib/scrapers/router.ts (routes by platform, auto-detects Shopify)
+- Alert evaluator: src/lib/alerts/evaluator.ts (evaluates rules after each check)
+- Cron: /api/cron/check (GET, protected by CRON_SECRET, runs every 10 min via Vercel)
+- Manual check: /api/products/[id]/check (POST, authenticated)
+- Batch check: /api/projects/[id]/check-all (POST, authenticated)
+
 ## Key Conventions
 - All components in /src/components
 - All lib/utilities in /src/lib
