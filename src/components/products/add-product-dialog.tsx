@@ -21,10 +21,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 
 const platformColors: Record<Platform, string> = {
-  shopify: "bg-green-100 text-green-800",
-  amazon: "bg-orange-100 text-orange-800",
-  walmart: "bg-blue-100 text-blue-800",
-  generic: "bg-gray-100 text-gray-800",
+  shopify: "bg-emerald-50 text-emerald-700 border-0",
+  amazon: "bg-orange-50 text-orange-700 border-0",
+  walmart: "bg-blue-50 text-blue-700 border-0",
+  generic: "bg-slate-50 text-slate-600 border-0",
 };
 
 const platformLabels: Record<Platform, string> = {
@@ -88,7 +88,7 @@ export function AddProductDialog({ projectId }: AddProductDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setError(null); setDetectedPlatform(null); } }}>
       <DialogTrigger asChild>
-        <Button>
+        <Button className="gradient-primary border-0 text-white shadow-sm hover:opacity-90">
           <Plus className="mr-2 h-4 w-4" />
           Add Product
         </Button>
@@ -147,7 +147,7 @@ export function AddProductDialog({ projectId }: AddProductDialogProps) {
                 min="0"
                 placeholder="Your price for comparison"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-slate-500">
                 Enter your own price so we can alert you when a competitor
                 undercuts you.
               </p>
@@ -161,7 +161,7 @@ export function AddProductDialog({ projectId }: AddProductDialogProps) {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="gradient-primary border-0 text-white hover:opacity-90">
               {loading ? "Adding..." : "Add Product"}
             </Button>
           </DialogFooter>

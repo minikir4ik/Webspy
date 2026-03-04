@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { CreateProjectDialog } from "@/components/projects/create-project-dialog";
 import { ProjectCard } from "@/components/projects/project-card";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FolderKanban } from "lucide-react";
 import type { Project } from "@/lib/types/database";
 
@@ -37,11 +36,13 @@ export default async function ProjectsPage() {
   const projectList = (projects as Project[] | null) ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+            Projects
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
             Manage your competitor monitoring projects.
           </p>
         </div>
@@ -49,21 +50,18 @@ export default async function ProjectsPage() {
       </div>
 
       {projectList.length === 0 ? (
-        <Card>
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 rounded-full bg-muted p-4">
-              <FolderKanban className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <CardTitle>No projects yet</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="mb-4 text-sm text-muted-foreground">
-              Create your first project to start tracking competitor products
-              and prices.
-            </p>
-            <CreateProjectDialog />
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white py-16 px-6">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50 mb-4">
+            <FolderKanban className="h-8 w-8 text-indigo-500" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 mb-1">
+            No projects yet
+          </h3>
+          <p className="text-sm text-slate-500 mb-6 text-center max-w-sm">
+            Create your first project to start tracking competitor products and prices.
+          </p>
+          <CreateProjectDialog />
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projectList.map((project) => (

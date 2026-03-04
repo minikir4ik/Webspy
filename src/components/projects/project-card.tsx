@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FolderKanban, MoreVertical, Trash2, Package } from "lucide-react";
 import { deleteProject } from "@/lib/actions/projects";
-import { formatDate } from "@/lib/utils/format";
+import { relativeTime } from "@/lib/utils/format";
 import {
   Card,
   CardContent,
@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface ProjectCardProps {
   project: {
@@ -57,18 +58,20 @@ export function ProjectCard({ project, productCount }: ProjectCardProps) {
   return (
     <>
       <Card
-        className="cursor-pointer transition-colors hover:bg-muted/50"
+        className="group cursor-pointer border-t-4 border-t-indigo-500 shadow-sm transition-lift hover:shadow-md"
         onClick={() => router.push(`/projects/${project.id}`)}
       >
-        <CardHeader className="flex flex-row items-start justify-between space-y-0">
+        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
           <div className="flex items-start gap-3">
-            <div className="rounded-md bg-primary/10 p-2">
-              <FolderKanban className="h-5 w-5 text-primary" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50">
+              <FolderKanban className="h-5 w-5 text-indigo-600" />
             </div>
             <div>
-              <CardTitle className="text-base">{project.name}</CardTitle>
+              <CardTitle className="text-base font-semibold text-slate-900">
+                {project.name}
+              </CardTitle>
               {project.description && (
-                <CardDescription className="mt-1 line-clamp-2">
+                <CardDescription className="mt-1 line-clamp-2 text-slate-500">
                   {project.description}
                 </CardDescription>
               )}
@@ -79,7 +82,7 @@ export function ProjectCard({ project, productCount }: ProjectCardProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 shrink-0"
+                className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreVertical className="h-4 w-4" />
@@ -100,14 +103,14 @@ export function ProjectCard({ project, productCount }: ProjectCardProps) {
           </DropdownMenu>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Package className="h-3.5 w-3.5" />
-              <span>
-                {productCount} product{productCount !== 1 ? "s" : ""}
-              </span>
-            </div>
-            <span>Created {formatDate(project.created_at)}</span>
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 border-0 font-medium">
+              <Package className="mr-1 h-3 w-3" />
+              {productCount} product{productCount !== 1 ? "s" : ""}
+            </Badge>
+            <span className="text-xs text-slate-400">
+              {relativeTime(project.created_at)}
+            </span>
           </div>
         </CardContent>
       </Card>

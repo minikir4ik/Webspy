@@ -50,19 +50,19 @@ export function AutoScrape({ productId, lastCheckAt }: AutoScrapeProps) {
   return (
     <div className="mb-4">
       {status === "checking" && (
-        <div className="flex items-center gap-2 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-700">
+        <div className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           Updating...
         </div>
       )}
       {status === "done" && (
-        <div className="flex items-center gap-2 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           <CheckCircle2 className="h-3.5 w-3.5" />
           Updated just now
         </div>
       )}
       {status === "failed" && (
-        <div className="flex items-center gap-2 rounded-md bg-yellow-50 px-3 py-2 text-sm text-yellow-700">
+        <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
           <AlertTriangle className="h-3.5 w-3.5" />
           Update failed — using last known data
         </div>

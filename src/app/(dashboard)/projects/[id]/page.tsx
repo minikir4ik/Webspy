@@ -4,9 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AddProductDialog } from "@/components/products/add-product-dialog";
 import { ProductCard } from "@/components/products/product-card";
 import { AutoScrapeProject } from "@/components/products/auto-scrape-project";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Package } from "lucide-react";
+import { ChevronRight, Package } from "lucide-react";
 import type { Project, TrackedProduct } from "@/lib/types/database";
 
 interface ProjectDetailPageProps {
@@ -40,50 +38,49 @@ export default async function ProjectDetailPage({
   const productList = (products as TrackedProduct[] | null) ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <AutoScrapeProject projectId={id} productCount={productList.length} />
-      <div>
-        <Link href="/projects">
-          <Button variant="ghost" size="sm" className="mb-2 -ml-2">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back to Projects
-          </Button>
+
+      {/* Breadcrumbs */}
+      <nav className="flex items-center gap-1.5 text-sm">
+        <Link href="/projects" className="text-slate-500 hover:text-slate-900 transition-colors">
+          Projects
         </Link>
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {typedProject.name}
-            </h1>
-            {typedProject.description && (
-              <p className="mt-1 text-muted-foreground">
-                {typedProject.description}
-              </p>
-            )}
-            <p className="mt-1 text-sm text-muted-foreground">
-              {productList.length} product{productList.length !== 1 ? "s" : ""}{" "}
-              tracked
+        <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+        <span className="font-medium text-slate-900">{typedProject.name}</span>
+      </nav>
+
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+            {typedProject.name}
+          </h1>
+          {typedProject.description && (
+            <p className="mt-1 text-sm text-slate-500">
+              {typedProject.description}
             </p>
-          </div>
-          <AddProductDialog projectId={id} />
+          )}
+          <p className="mt-1 text-xs text-slate-400">
+            {productList.length} product{productList.length !== 1 ? "s" : ""}{" "}
+            tracked
+          </p>
         </div>
+        <AddProductDialog projectId={id} />
       </div>
 
       {productList.length === 0 ? (
-        <Card>
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 rounded-full bg-muted p-4">
-              <Package className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <CardTitle>No products tracked yet</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="mb-4 text-sm text-muted-foreground">
-              Add a competitor product URL to start monitoring prices and stock
-              status.
-            </p>
-            <AddProductDialog projectId={id} />
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white py-16 px-6">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50 mb-4">
+            <Package className="h-8 w-8 text-indigo-500" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 mb-1">
+            No products tracked yet
+          </h3>
+          <p className="text-sm text-slate-500 mb-6 text-center max-w-sm">
+            Add a competitor product URL to start monitoring prices and stock status.
+          </p>
+          <AddProductDialog projectId={id} />
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {productList.map((product) => (

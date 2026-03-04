@@ -9,6 +9,8 @@ import {
   Play,
   ExternalLink,
   Circle,
+  ArrowDown,
+  ArrowUp,
 } from "lucide-react";
 import { deleteProduct, updateProduct } from "@/lib/actions/products";
 import { relativeTime, formatPrice, getDomainFromUrl } from "@/lib/utils/format";
@@ -38,24 +40,24 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 const platformConfig: Record<Platform, { label: string; className: string }> = {
-  shopify: { label: "Shopify", className: "bg-green-100 text-green-800" },
-  amazon: { label: "Amazon", className: "bg-orange-100 text-orange-800" },
-  walmart: { label: "Walmart", className: "bg-blue-100 text-blue-800" },
-  generic: { label: "Generic", className: "bg-gray-100 text-gray-800" },
+  shopify: { label: "Shopify", className: "bg-emerald-50 text-emerald-700 border-0" },
+  amazon: { label: "Amazon", className: "bg-orange-50 text-orange-700 border-0" },
+  walmart: { label: "Walmart", className: "bg-blue-50 text-blue-700 border-0" },
+  generic: { label: "Generic", className: "bg-slate-50 text-slate-600 border-0" },
 };
 
 const stockConfig: Record<StockStatus, { label: string; className: string }> = {
-  in_stock: { label: "In Stock", className: "bg-green-100 text-green-800" },
-  out_of_stock: { label: "Out of Stock", className: "bg-red-100 text-red-800" },
-  limited: { label: "Limited", className: "bg-yellow-100 text-yellow-800" },
-  unknown: { label: "Unknown", className: "bg-gray-100 text-gray-800" },
+  in_stock: { label: "In Stock", className: "bg-emerald-50 text-emerald-700 border-0" },
+  out_of_stock: { label: "Out of Stock", className: "bg-rose-50 text-rose-700 border-0" },
+  limited: { label: "Limited", className: "bg-amber-50 text-amber-700 border-0" },
+  unknown: { label: "Unknown", className: "bg-slate-50 text-slate-600 border-0" },
 };
 
-const statusConfig: Record<string, { color: string; label: string }> = {
-  active: { color: "text-green-500", label: "Active" },
-  paused: { color: "text-yellow-500", label: "Paused" },
-  broken: { color: "text-red-500", label: "Broken" },
-  pending: { color: "text-blue-500", label: "Pending" },
+const statusConfig: Record<string, { color: string; bgColor: string; label: string }> = {
+  active: { color: "text-emerald-500", bgColor: "bg-emerald-500", label: "Active" },
+  paused: { color: "text-amber-500", bgColor: "bg-amber-500", label: "Paused" },
+  broken: { color: "text-rose-500", bgColor: "bg-rose-500", label: "Broken" },
+  pending: { color: "text-blue-500", bgColor: "bg-blue-500", label: "Pending" },
 };
 
 interface ProductCardProps {
@@ -96,20 +98,25 @@ export function ProductCard({ product, projectId }: ProductCardProps) {
   return (
     <>
       <Card
-        className="cursor-pointer transition-colors hover:bg-muted/50"
+        className="group cursor-pointer shadow-sm transition-lift hover:shadow-md"
         onClick={() =>
           router.push(`/projects/${projectId}/products/${product.id}`)
         }
       >
         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
           <div className="min-w-0 flex-1 pr-2">
-            <CardTitle className="truncate text-base">{displayName}</CardTitle>
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              <Badge variant="secondary" className={platform.className}>
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className={`h-2 w-2 rounded-full ${status.bgColor}`} />
+              <CardTitle className="truncate text-sm font-semibold text-slate-900">
+                {displayName}
+              </CardTitle>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge variant="secondary" className={platform.className + " text-[11px] h-5 px-1.5"}>
                 {platform.label}
               </Badge>
               {stock && (
-                <Badge variant="secondary" className={stock.className}>
+                <Badge variant="secondary" className={stock.className + " text-[11px] h-5 px-1.5"}>
                   {stock.label}
                 </Badge>
               )}
@@ -120,7 +127,7 @@ export function ProductCard({ product, projectId }: ProductCardProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 shrink-0"
+                className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreVertical className="h-4 w-4" />
@@ -170,29 +177,44 @@ export function ProductCard({ product, projectId }: ProductCardProps) {
           </DropdownMenu>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Price</span>
-              <span className="text-sm font-medium">
+              <span className="text-xs text-slate-500">Price</span>
+              <span className="text-lg font-bold text-slate-900">
                 {product.last_price !== null
                   ? formatPrice(product.last_price, product.currency)
-                  : "Not checked yet"}
+                  : "—"}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Last Check</span>
-              <span className="text-sm">
+            {product.my_price !== null && product.last_price !== null && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500">vs My Price</span>
+                <div className="flex items-center gap-1">
+                  {product.last_price < product.my_price ? (
+                    <>
+                      <ArrowDown className="h-3 w-3 text-rose-500" />
+                      <span className="text-xs font-medium text-rose-600">
+                        {formatPrice(product.my_price - product.last_price, product.currency)} cheaper
+                      </span>
+                    </>
+                  ) : product.last_price > product.my_price ? (
+                    <>
+                      <ArrowUp className="h-3 w-3 text-emerald-500" />
+                      <span className="text-xs font-medium text-emerald-600">
+                        {formatPrice(product.last_price - product.my_price, product.currency)} higher
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-xs text-slate-400">Same price</span>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+              <span className="text-[11px] text-slate-400">
                 {relativeTime(product.last_check_at)}
               </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Status</span>
-              <div className="flex items-center gap-1.5">
-                <Circle
-                  className={`h-2.5 w-2.5 fill-current ${status.color}`}
-                />
-                <span className="text-sm">{status.label}</span>
-              </div>
+              <span className="text-[11px] text-slate-400">{status.label}</span>
             </div>
           </div>
         </CardContent>

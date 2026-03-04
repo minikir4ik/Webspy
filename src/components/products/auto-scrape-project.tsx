@@ -45,25 +45,32 @@ export function AutoScrapeProject({ projectId, productCount }: AutoScrapeProject
 
   if (status === "idle") return null;
 
+  // Build summary text with proper separators
+  function buildSummaryText(s: { succeeded: number; failed: number; skipped: number }): string {
+    if (s.succeeded === 0 && s.failed === 0) return "All products up to date";
+    const parts: string[] = [];
+    if (s.succeeded > 0) parts.push(`${s.succeeded} updated`);
+    if (s.failed > 0) parts.push(`${s.failed} failed`);
+    if (s.skipped > 0) parts.push(`${s.skipped} already up to date`);
+    return parts.join(", ");
+  }
+
   return (
     <div className="mb-4">
       {status === "checking" && (
-        <div className="flex items-center gap-2 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-700">
+        <div className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           Updating {productCount} product{productCount !== 1 ? "s" : ""}...
         </div>
       )}
       {status === "done" && summary && (
-        <div className="flex items-center gap-2 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           <CheckCircle2 className="h-3.5 w-3.5" />
-          {summary.succeeded > 0 && `${summary.succeeded} updated`}
-          {summary.failed > 0 && `, ${summary.failed} failed`}
-          {summary.skipped > 0 && `, ${summary.skipped} already up to date`}
-          {summary.succeeded === 0 && summary.failed === 0 && "All products up to date"}
+          {buildSummaryText(summary)}
         </div>
       )}
       {status === "failed" && (
-        <div className="flex items-center gap-2 rounded-md bg-yellow-50 px-3 py-2 text-sm text-yellow-700">
+        <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
           <AlertTriangle className="h-3.5 w-3.5" />
           Batch update failed — using last known data
         </div>

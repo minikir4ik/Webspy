@@ -12,7 +12,6 @@ import type { AlertRule, AlertRuleType } from "@/lib/types/database";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -29,7 +28,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 
 const ruleTypeLabels: Record<AlertRuleType, string> = {
   price_drop_percent: "Price drops by %",
@@ -127,12 +125,14 @@ export function AlertRulesSection({
   }
 
   return (
-    <Card>
+    <Card className="shadow-sm">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bell className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">Alert Rules</CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50">
+              <Bell className="h-4 w-4 text-indigo-600" />
+            </div>
+            <CardTitle className="text-base font-semibold text-slate-900">Alert Rules</CardTitle>
           </div>
           <Dialog
             open={open}
@@ -142,7 +142,7 @@ export function AlertRulesSection({
             }}
           >
             <DialogTrigger asChild>
-              <Button size="sm">
+              <Button size="sm" className="gradient-primary border-0 text-white hover:opacity-90">
                 <Plus className="mr-1 h-3.5 w-3.5" />
                 Add Rule
               </Button>
@@ -224,7 +224,7 @@ export function AlertRulesSection({
                         </option>
                       ))}
                     </select>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-slate-500">
                       Minimum time between repeated alerts for this rule.
                     </p>
                   </div>
@@ -237,7 +237,7 @@ export function AlertRulesSection({
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={loading}>
+                  <Button type="submit" disabled={loading} className="gradient-primary border-0 text-white hover:opacity-90">
                     {loading ? "Creating..." : "Create Rule"}
                   </Button>
                 </DialogFooter>
@@ -245,62 +245,62 @@ export function AlertRulesSection({
             </DialogContent>
           </Dialog>
         </div>
-        <CardDescription>
+        <p className="text-sm text-slate-500">
           Configure notifications for price changes and stock updates.
-        </CardDescription>
+        </p>
       </CardHeader>
       <CardContent>
         {rules.length === 0 ? (
-          <div className="flex h-24 items-center justify-center rounded-md border border-dashed">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-slate-200">
+            <p className="text-sm text-slate-400">
               No alert rules configured. Add a rule to get notified.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {rules.map((rule, idx) => (
-              <div key={rule.id}>
-                {idx > 0 && <Separator className="mb-3" />}
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {ruleTypeLabels[rule.rule_type]}
-                      </span>
-                      <Badge
-                        variant="secondary"
-                        className={
-                          rule.is_active
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
-                        }
-                      >
-                        {rule.is_active ? "Active" : "Paused"}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>Threshold: {formatThreshold(rule)}</span>
-                      <span>Cooldown: {formatCooldown(rule.cooldown_minutes)}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs"
-                      onClick={() => handleToggle(rule.id, rule.is_active)}
+          <div className="space-y-2">
+            {rules.map((rule) => (
+              <div
+                key={rule.id}
+                className="flex items-center justify-between rounded-lg border border-slate-200 p-3"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-slate-900">
+                      {ruleTypeLabels[rule.rule_type]}
+                    </span>
+                    <Badge
+                      variant="secondary"
+                      className={
+                        rule.is_active
+                          ? "bg-emerald-50 text-emerald-700 border-0 text-[11px] h-5 px-1.5"
+                          : "bg-slate-100 text-slate-500 border-0 text-[11px] h-5 px-1.5"
+                      }
                     >
-                      {rule.is_active ? "Pause" : "Enable"}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(rule.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                      {rule.is_active ? "Active" : "Paused"}
+                    </Badge>
                   </div>
+                  <div className="flex items-center gap-3 text-xs text-slate-500">
+                    <span>Threshold: {formatThreshold(rule)}</span>
+                    <span>Cooldown: {formatCooldown(rule.cooldown_minutes)}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs text-slate-600"
+                    onClick={() => handleToggle(rule.id, rule.is_active)}
+                  >
+                    {rule.is_active ? "Pause" : "Enable"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-slate-400 hover:text-destructive"
+                    onClick={() => handleDelete(rule.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
               </div>
             ))}

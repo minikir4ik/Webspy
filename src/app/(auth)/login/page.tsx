@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -45,22 +44,22 @@ export default function LoginPage() {
   }
 
   return (
-    <Card>
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold">Sign in to WebSpy</CardTitle>
-        <CardDescription>
-          Enter your email and password to access your account
-        </CardDescription>
+    <Card className="shadow-lg border-0">
+      <CardHeader className="space-y-1 text-center pb-2">
+        <CardTitle className="text-xl font-semibold text-slate-900">Welcome back</CardTitle>
+        <p className="text-sm text-slate-500">
+          Enter your credentials to access your account
+        </p>
       </CardHeader>
       <form onSubmit={handleLogin}>
         <CardContent className="space-y-4">
           {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">
               {error}
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-slate-700">Email</Label>
             <Input
               id="email"
               type="email"
@@ -68,26 +67,32 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              className="h-10"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-slate-700">Password</Label>
             <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              className="h-10"
             />
           </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button
+            type="submit"
+            className="w-full h-10 gradient-primary border-0 text-white shadow-sm hover:opacity-90"
+            disabled={loading}
+          >
             {loading ? "Signing in..." : "Sign in"}
           </Button>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-slate-500">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-primary underline-offset-4 hover:underline">
+            <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
               Sign up
             </Link>
           </p>

@@ -66,7 +66,6 @@ export function AccountSwitcher() {
   }
 
   async function handleSwitchAccount(account: SavedAccount) {
-    // Sign out current, redirect to login with hint
     await supabase.auth.signOut();
     router.push(`/login?email=${encodeURIComponent(account.email)}`);
     router.refresh();
@@ -77,16 +76,17 @@ export function AccountSwitcher() {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton className="h-auto py-2">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+            <SidebarMenuButton className="h-auto py-2.5 px-3 hover:bg-sidebar-accent">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full gradient-primary text-xs font-semibold text-white">
                 {initial}
               </div>
               <div className="flex flex-col items-start overflow-hidden">
-                <span className="truncate text-sm font-medium">
+                <span className="truncate text-sm font-medium text-sidebar-accent-foreground">
                   {currentEmail ?? "Loading..."}
                 </span>
+                <span className="text-[11px] text-sidebar-foreground/50">Free plan</span>
               </div>
-              <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+              <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 text-sidebar-foreground/40" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent

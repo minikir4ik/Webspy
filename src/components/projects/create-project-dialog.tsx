@@ -45,7 +45,7 @@ export function CreateProjectDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button className="gradient-primary border-0 text-white shadow-sm hover:opacity-90">
           <Plus className="mr-2 h-4 w-4" />
           New Project
         </Button>
@@ -91,7 +91,7 @@ export function CreateProjectDialog() {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="gradient-primary border-0 text-white hover:opacity-90">
               {loading ? "Creating..." : "Create Project"}
             </Button>
           </DialogFooter>
