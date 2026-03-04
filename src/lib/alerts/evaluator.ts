@@ -16,30 +16,54 @@ export async function evaluateAlerts(
 ): Promise<TriggeredAlert[]> {
   const admin = createAdminClient();
 
+  console.log(`[alerts] Evaluating alerts for product "${product.product_name}" (${product.id})`);
+  console.log(`[alerts] newCheck.price=${newCheck.price}, product.my_price=${product.my_price}`);
+  console.log(`[alerts] previousCheck.price=${previousCheck?.price ?? "null (no previous check)"}`);
+
   // Load active alert rules for this product
-  const { data: rules } = await admin
+  const { data: rules, error: rulesError } = await admin
     .from("alert_rules")
     .select("*")
     .eq("product_id", product.id)
     .eq("is_active", true);
 
-  if (!rules || rules.length === 0) return [];
+  if (rulesError) {
+    console.error("[alerts] Error loading rules:", rulesError.message);
+    return [];
+  }
+
+  if (!rules || rules.length === 0) {
+    console.log("[alerts] No active rules found for this product");
+    return [];
+  }
+
+  console.log(`[alerts] Found ${rules.length} active rule(s): ${(rules as AlertRule[]).map(r => r.rule_type).join(", ")}`);
 
   const triggered: TriggeredAlert[] = [];
   const now = new Date();
 
   for (const rule of rules as AlertRule[]) {
+    console.log(`[alerts] Evaluating rule: ${rule.rule_type} (id=${rule.id})`);
+
     // Check cooldown
     if (rule.last_triggered_at) {
       const lastTriggered = new Date(rule.last_triggered_at);
       const cooldownMs = rule.cooldown_minutes * 60 * 1000;
-      if (now.getTime() - lastTriggered.getTime() < cooldownMs) {
+      const elapsed = now.getTime() - lastTriggered.getTime();
+      if (elapsed < cooldownMs) {
+        console.log(`[alerts] Rule ${rule.rule_type} skipped: cooldown active (${Math.round(elapsed / 60000)}min < ${rule.cooldown_minutes}min)`);
         continue;
       }
     }
 
     const alert = evaluateRule(rule, product, newCheck, previousCheck);
-    if (!alert) continue;
+
+    if (!alert) {
+      console.log(`[alerts] Rule ${rule.rule_type} did NOT trigger`);
+      continue;
+    }
+
+    console.log(`[alerts] Rule ${rule.rule_type} TRIGGERED: ${alert.message}`);
 
     // Update last_triggered_at
     await admin
@@ -48,7 +72,7 @@ export async function evaluateAlerts(
       .eq("id", rule.id);
 
     // Insert alert history
-    await admin.from("alert_history").insert({
+    const { error: insertError } = await admin.from("alert_history").insert({
       rule_id: rule.id,
       product_id: product.id,
       user_id: product.user_id,
@@ -58,6 +82,12 @@ export async function evaluateAlerts(
       channels_sent: rule.notify_channels,
     });
 
+    if (insertError) {
+      console.error(`[alerts] Failed to insert alert_history: ${insertError.message}`);
+    } else {
+      console.log(`[alerts] Inserted alert_history row for rule ${rule.rule_type}`);
+    }
+
     triggered.push({
       ruleId: rule.id,
       ruleType: rule.rule_type,
@@ -65,6 +95,7 @@ export async function evaluateAlerts(
     });
   }
 
+  console.log(`[alerts] Evaluation complete. ${triggered.length} alert(s) triggered.`);
   return triggered;
 }
 
@@ -157,14 +188,26 @@ function evaluateRule(
     }
 
     case "competitor_undercuts_me": {
-      if (newPrice === null || product.my_price === null) return null;
+      // This rule compares newPrice directly against my_price
+      // Does NOT require a previous check — fires whenever competitor price < my price
+      console.log(`[alerts] competitor_undercuts_me: newPrice=${newPrice}, my_price=${product.my_price}`);
+      if (newPrice === null) {
+        console.log("[alerts] competitor_undercuts_me: skipped — newPrice is null");
+        return null;
+      }
+      if (product.my_price === null) {
+        console.log("[alerts] competitor_undercuts_me: skipped — my_price is null");
+        return null;
+      }
       if (newPrice < product.my_price) {
+        console.log(`[alerts] competitor_undercuts_me: TRIGGERED — $${newPrice} < $${product.my_price}`);
         return {
           message: `${productName} is now $${newPrice}, undercutting your price of $${product.my_price}`,
           oldValue: String(product.my_price),
           newValue: String(newPrice),
         };
       }
+      console.log(`[alerts] competitor_undercuts_me: not triggered — $${newPrice} >= $${product.my_price}`);
       return null;
     }
 

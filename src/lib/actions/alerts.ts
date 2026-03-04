@@ -62,6 +62,7 @@ export async function createAlertRule(formData: FormData) {
   if (error) return { error: error.message };
 
   revalidatePath(`/projects`);
+  revalidatePath(`/alerts`);
   return { data };
 }
 
@@ -84,6 +85,7 @@ export async function toggleAlertRule(ruleId: string, isActive: boolean) {
   if (error) return { error: error.message };
 
   revalidatePath(`/projects`);
+  revalidatePath(`/alerts`);
   return { success: true };
 }
 
@@ -106,5 +108,6 @@ export async function deleteAlertRule(ruleId: string) {
   if (error) return { error: error.message };
 
   revalidatePath(`/projects`);
+  revalidatePath(`/alerts`);
   return { success: true };
 }
