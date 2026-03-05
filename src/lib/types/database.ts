@@ -20,6 +20,8 @@ export interface Profile {
   stripe_subscription_id: string | null;
   product_limit: number;
   check_interval_minutes: number;
+  email_notifications: boolean;
+  daily_digest: boolean;
   created_at: string;
 }
 

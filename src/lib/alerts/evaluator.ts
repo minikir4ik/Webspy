@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendAlertNotification } from "@/lib/alerts/notifier";
 import type { TrackedProduct, PriceCheck, AlertRule } from "@/lib/types/database";
 
 interface TriggeredAlert {
@@ -39,6 +40,18 @@ export async function evaluateAlerts(
 
   console.log(`[alerts] Found ${rules.length} active rule(s): ${(rules as AlertRule[]).map(r => r.rule_type).join(", ")}`);
 
+  // Fetch user email + notification preferences
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("email, email_notifications")
+    .eq("id", product.user_id)
+    .single();
+
+  const userEmail = (profile as { email: string | null; email_notifications?: boolean } | null)?.email ?? null;
+  const emailEnabled = (profile as { email_notifications?: boolean } | null)?.email_notifications !== false;
+
+  console.log(`[alerts] User email: ${userEmail ?? "not found"}, emailEnabled: ${emailEnabled}`);
+
   const triggered: TriggeredAlert[] = [];
   const now = new Date();
 
@@ -71,6 +84,20 @@ export async function evaluateAlerts(
       .update({ last_triggered_at: now.toISOString() })
       .eq("id", rule.id);
 
+    // Determine channels sent
+    const channelsSent: string[] = [];
+
+    // Send email notification if enabled
+    if (userEmail && emailEnabled) {
+      const triggeredAlertData = {
+        ruleId: rule.id,
+        ruleType: rule.rule_type,
+        ...alert,
+      };
+      const sent = await sendAlertNotification(triggeredAlertData, product, userEmail);
+      if (sent) channelsSent.push("email");
+    }
+
     // Insert alert history
     const { error: insertError } = await admin.from("alert_history").insert({
       rule_id: rule.id,
@@ -79,13 +106,13 @@ export async function evaluateAlerts(
       message: alert.message,
       old_value: alert.oldValue,
       new_value: alert.newValue,
-      channels_sent: rule.notify_channels,
+      channels_sent: channelsSent.length > 0 ? channelsSent : rule.notify_channels,
     });
 
     if (insertError) {
       console.error(`[alerts] Failed to insert alert_history: ${insertError.message}`);
     } else {
-      console.log(`[alerts] Inserted alert_history row for rule ${rule.rule_type}`);
+      console.log(`[alerts] Inserted alert_history row for rule ${rule.rule_type} (channels: ${channelsSent.join(", ") || "none"})`);
     }
 
     triggered.push({
@@ -188,8 +215,6 @@ function evaluateRule(
     }
 
     case "competitor_undercuts_me": {
-      // This rule compares newPrice directly against my_price
-      // Does NOT require a previous check — fires whenever competitor price < my price
       console.log(`[alerts] competitor_undercuts_me: newPrice=${newPrice}, my_price=${product.my_price}`);
       if (newPrice === null) {
         console.log("[alerts] competitor_undercuts_me: skipped — newPrice is null");
