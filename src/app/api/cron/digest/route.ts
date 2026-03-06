@@ -1,11 +1,75 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resend, fromEmail } from "@/lib/resend";
-import { DailyDigestEmail, dailyDigestSubject } from "@/lib/emails/daily-digest";
 
 const BASE_URL = process.env.NEXT_PUBLIC_VERCEL_URL
   ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
   : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+interface PriceChange {
+  productName: string;
+  oldPrice: number;
+  newPrice: number;
+  changePercent: number;
+  currency: string;
+}
+
+function formatCurrency(price: number, currency: string): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(price);
+}
+
+function buildDigestHtml(date: string, totalChecked: number, totalChanges: number, topChanges: PriceChange[]): string {
+  const changesRows = topChanges.map(c => {
+    const isDown = c.changePercent < 0;
+    const color = isDown ? "#16a34a" : "#e11d48";
+    const sign = c.changePercent > 0 ? "+" : "";
+    return `<tr style="border-bottom:1px solid #f1f5f9">
+<td style="padding:8px 4px;font-size:13px;color:#1e293b;font-weight:500">${c.productName}</td>
+<td style="padding:8px 4px;font-size:13px;color:#64748b;text-align:right">${formatCurrency(c.oldPrice, c.currency)}</td>
+<td style="padding:8px 4px;font-size:13px;color:#1e293b;font-weight:600;text-align:right">${formatCurrency(c.newPrice, c.currency)}</td>
+<td style="padding:8px 4px;font-size:13px;font-weight:600;text-align:right;color:${color}">${sign}${c.changePercent.toFixed(1)}%</td>
+</tr>`;
+  }).join("");
+
+  const tableHtml = topChanges.length > 0
+    ? `<h2 style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 12px">Biggest Price Changes</h2>
+<table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+<thead><tr style="border-bottom:2px solid #f1f5f9">
+<th style="text-align:left;padding:8px 4px;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em">Product</th>
+<th style="text-align:right;padding:8px 4px;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em">Old</th>
+<th style="text-align:right;padding:8px 4px;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em">New</th>
+<th style="text-align:right;padding:8px 4px;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em">Change</th>
+</tr></thead><tbody>${changesRows}</tbody></table>`
+    : `<p style="font-size:14px;color:#94a3b8;text-align:center;margin:0 0 24px">No price changes detected in the last 24 hours.</p>`;
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:'Inter','Helvetica Neue',Arial,sans-serif;background:#f8f9fa">
+<div style="max-width:560px;margin:40px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+<div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:24px 32px;text-align:center">
+<div style="font-size:20px;font-weight:700;color:#fff;letter-spacing:-.02em">WebSpy</div>
+</div>
+<div style="padding:32px">
+<h1 style="font-size:18px;font-weight:600;color:#1e293b;margin:0 0 4px">Daily Digest</h1>
+<p style="font-size:13px;color:#94a3b8;margin:0 0 24px">${date}</p>
+<div style="display:flex;gap:16px;margin-bottom:24px">
+<div style="flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center">
+<div style="font-size:24px;font-weight:700;color:#1e293b">${totalChecked}</div>
+<div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em">Checked</div>
+</div>
+<div style="flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center">
+<div style="font-size:24px;font-weight:700;color:${totalChanges > 0 ? "#6366f1" : "#1e293b"}">${totalChanges}</div>
+<div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em">Changes</div>
+</div>
+</div>
+${tableHtml}
+<a href="${BASE_URL}" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:14px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none">View Dashboard</a>
+</div>
+<div style="padding:16px 32px;border-top:1px solid #f1f5f9;background:#fafafa;text-align:center">
+<p style="font-size:11px;color:#94a3b8;margin:0">You received this daily digest from WebSpy.
+<a href="${BASE_URL}/settings" style="color:#6366f1;text-decoration:none">Manage preferences</a></p>
+</div></div></body></html>`;
+}
 
 export async function GET(request: Request) {
   // Verify cron secret
@@ -22,10 +86,9 @@ export async function GET(request: Request) {
   console.log(`[digest] Starting daily digest for ${dateStr}`);
 
   try {
-    // Get all users who have tracked products and daily_digest enabled
     const { data: profiles } = await admin
       .from("profiles")
-      .select("id, email, daily_digest");
+      .select("id, email");
 
     if (!profiles || profiles.length === 0) {
       console.log("[digest] No profiles found");
@@ -35,14 +98,24 @@ export async function GET(request: Request) {
     let totalSent = 0;
 
     for (const profile of profiles) {
-      const p = profile as { id: string; email: string | null; daily_digest?: boolean };
+      const p = profile as { id: string; email: string | null };
       if (!p.email) continue;
-      if (p.daily_digest === false) {
-        console.log(`[digest] User ${p.id}: daily digest disabled, skipping`);
-        continue;
+
+      // Check daily_digest preference (column may not exist yet)
+      try {
+        const { data: prefs } = await admin
+          .from("profiles")
+          .select("daily_digest")
+          .eq("id", p.id)
+          .single();
+        if (prefs && (prefs as { daily_digest?: boolean }).daily_digest === false) {
+          console.log(`[digest] User ${p.id}: daily digest disabled`);
+          continue;
+        }
+      } catch {
+        // Column doesn't exist yet, continue
       }
 
-      // Get user's tracked products
       const { data: products } = await admin
         .from("tracked_products")
         .select("id, product_name, currency")
@@ -56,7 +129,6 @@ export async function GET(request: Request) {
         products.map((pr: { id: string; product_name: string | null; currency: string }) => [pr.id, pr])
       );
 
-      // Get price checks from last 24 hours for these products
       const { data: recentChecks } = await admin
         .from("price_checks")
         .select("*")
@@ -67,15 +139,6 @@ export async function GET(request: Request) {
       if (!recentChecks) continue;
 
       const totalChecked = new Set(recentChecks.map((c: { product_id: string }) => c.product_id)).size;
-
-      // Find price changes: compare first and last check per product within 24h
-      interface PriceChange {
-        productName: string;
-        oldPrice: number;
-        newPrice: number;
-        changePercent: number;
-        currency: string;
-      }
 
       const checksByProduct = new Map<string, { price: number | null; checked_at: string }[]>();
       for (const check of recentChecks as { product_id: string; price: number | null; checked_at: string }[]) {
@@ -104,25 +167,17 @@ export async function GET(request: Request) {
         });
       }
 
-      // Sort by absolute change, take top 5
       priceChanges.sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent));
       const topChanges = priceChanges.slice(0, 5);
 
-      // Only send if there were actual checks
       if (totalChecked === 0) continue;
 
       try {
         const { error } = await resend.emails.send({
           from: fromEmail,
           to: p.email,
-          subject: dailyDigestSubject(dateStr),
-          react: DailyDigestEmail({
-            date: dateStr,
-            totalChecked,
-            totalChanges: priceChanges.length,
-            topChanges,
-            dashboardUrl: BASE_URL,
-          }),
+          subject: `📊 WebSpy Daily Digest — ${dateStr}`,
+          html: buildDigestHtml(dateStr, totalChecked, priceChanges.length, topChanges),
         });
 
         if (error) {

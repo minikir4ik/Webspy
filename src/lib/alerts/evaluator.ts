@@ -41,16 +41,32 @@ export async function evaluateAlerts(
   console.log(`[alerts] Found ${rules.length} active rule(s): ${(rules as AlertRule[]).map(r => r.rule_type).join(", ")}`);
 
   // Fetch user email + notification preferences
-  const { data: profile } = await admin
+  const { data: profile, error: profileError } = await admin
     .from("profiles")
-    .select("email, email_notifications")
+    .select("email")
     .eq("id", product.user_id)
     .single();
 
-  const userEmail = (profile as { email: string | null; email_notifications?: boolean } | null)?.email ?? null;
-  const emailEnabled = (profile as { email_notifications?: boolean } | null)?.email_notifications !== false;
+  console.log(`[alerts] Profile query for user ${product.user_id}:`, { profile, profileError: profileError?.message });
 
-  console.log(`[alerts] User email: ${userEmail ?? "not found"}, emailEnabled: ${emailEnabled}`);
+  const userEmail = (profile as { email: string | null } | null)?.email ?? null;
+
+  // email_notifications column may not exist yet (migration 002), so query it separately
+  let emailEnabled = true;
+  try {
+    const { data: prefs } = await admin
+      .from("profiles")
+      .select("email_notifications")
+      .eq("id", product.user_id)
+      .single();
+    if (prefs && (prefs as { email_notifications?: boolean }).email_notifications === false) {
+      emailEnabled = false;
+    }
+  } catch {
+    // Column doesn't exist yet, default to true
+  }
+
+  console.log(`[alerts] User email: "${userEmail}", emailEnabled: ${emailEnabled}`);
 
   const triggered: TriggeredAlert[] = [];
   const now = new Date();
@@ -89,13 +105,17 @@ export async function evaluateAlerts(
 
     // Send email notification if enabled
     if (userEmail && emailEnabled) {
+      console.log(`[alerts] About to call sendAlertNotification for ${rule.rule_type} to ${userEmail}`);
       const triggeredAlertData = {
         ruleId: rule.id,
         ruleType: rule.rule_type,
         ...alert,
       };
       const sent = await sendAlertNotification(triggeredAlertData, product, userEmail);
+      console.log(`[alerts] sendAlertNotification returned: ${sent}`);
       if (sent) channelsSent.push("email");
+    } else {
+      console.log(`[alerts] SKIPPING email: userEmail="${userEmail}", emailEnabled=${emailEnabled}`);
     }
 
     // Insert alert history
