@@ -11,6 +11,7 @@ export async function addProduct(formData: FormData) {
   const productName = (formData.get("product_name") as string) || null;
   const myPriceStr = formData.get("my_price") as string;
   const myPrice = myPriceStr ? parseFloat(myPriceStr) : null;
+  const isOwnProduct = formData.get("is_own_product") === "true";
 
   if (!projectId) {
     return { error: "Project ID is required" };
@@ -68,6 +69,7 @@ export async function addProduct(formData: FormData) {
       platform,
       product_name: productName?.trim() || null,
       my_price: myPrice,
+      is_own_product: isOwnProduct,
       status: "pending" as ProductStatus,
     })
     .select()

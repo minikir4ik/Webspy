@@ -20,7 +20,7 @@ import {
   Tag,
   Calendar,
 } from "lucide-react";
-import type { TrackedProduct, Platform, StockStatus, PriceCheck, AlertRule } from "@/lib/types/database";
+import type { TrackedProduct, Platform, StockStatus, PriceCheck, AlertRule, Anomaly } from "@/lib/types/database";
 
 const platformConfig: Record<Platform, { label: string; className: string }> = {
   shopify: { label: "Shopify", className: "bg-emerald-50 text-emerald-700 border-0" },
@@ -95,6 +95,15 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     .order("created_at", { ascending: false });
 
   const rules = (alertRules as AlertRule[] | null) ?? [];
+
+  // Fetch anomalies for this product
+  const { data: anomalyData } = await supabase
+    .from("anomalies")
+    .select("*")
+    .eq("product_id", productId)
+    .order("detected_at", { ascending: false });
+
+  const anomalies = (anomalyData as Anomaly[] | null) ?? [];
 
   const infoCards = [
     {
@@ -186,7 +195,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         ))}
       </div>
 
-      <PriceHistoryChart checks={checks} currency={p.currency} />
+      <PriceHistoryChart checks={checks} currency={p.currency} anomalies={anomalies} />
 
       <RecentChecksTable checks={recentChecks} currency={p.currency} />
 

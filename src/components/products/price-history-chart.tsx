@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import type { PriceCheck } from "@/lib/types/database";
+import type { PriceCheck, Anomaly } from "@/lib/types/database";
 import { formatPrice } from "@/lib/utils/format";
 import {
   Card,
@@ -17,8 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { ArrowDown, ArrowUp, Minus, AlertTriangle } from "lucide-react";
 
 type Range = "7d" | "30d" | "90d" | "all";
 
@@ -39,6 +38,7 @@ const stockLabels: Record<string, string> = {
 interface PriceHistoryChartProps {
   checks: PriceCheck[];
   currency: string;
+  anomalies?: Anomaly[];
 }
 
 function formatDateShort(dateStr: string) {
@@ -57,25 +57,41 @@ function formatDateTime(dateStr: string) {
   });
 }
 
+interface ChartDataPoint {
+  date: string;
+  dateLabel: string;
+  price: number | null;
+  stockStatus: string | null;
+  currency: string;
+  anomaly?: Anomaly;
+}
+
 interface CustomDotProps {
   cx?: number;
   cy?: number;
-  payload?: { stockStatus: string | null };
+  payload?: ChartDataPoint;
 }
 
 function CustomDot({ cx, cy, payload }: CustomDotProps) {
   if (cx === undefined || cy === undefined) return null;
+
+  if (payload?.anomaly) {
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={6} fill="#f43f5e" stroke="white" strokeWidth={2} />
+        <text x={cx} y={cy - 10} textAnchor="middle" fontSize={10} fill="#f43f5e">
+          !
+        </text>
+      </g>
+    );
+  }
+
   const color = stockColors[payload?.stockStatus ?? "unknown"] ?? "#94a3b8";
   return <circle cx={cx} cy={cy} r={4} fill={color} stroke="white" strokeWidth={2} />;
 }
 
 interface TooltipPayloadItem {
-  payload: {
-    date: string;
-    price: number | null;
-    stockStatus: string | null;
-    currency: string;
-  };
+  payload: ChartDataPoint;
 }
 
 function CustomTooltip({
@@ -97,11 +113,20 @@ function CustomTooltip({
         <div className="h-2 w-2 rounded-full" style={{ backgroundColor: stockColor }} />
         <p className="text-xs text-slate-500">{stockLabel}</p>
       </div>
+      {data.anomaly && (
+        <div className="mt-2 pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-1 text-xs text-rose-600">
+            <AlertTriangle className="h-3 w-3" />
+            <span className="font-medium">Anomaly</span>
+          </div>
+          <p className="text-xs text-slate-600 mt-0.5">{data.anomaly.description}</p>
+        </div>
+      )}
     </div>
   );
 }
 
-export function PriceHistoryChart({ checks, currency }: PriceHistoryChartProps) {
+export function PriceHistoryChart({ checks, currency, anomalies = [] }: PriceHistoryChartProps) {
   const [range, setRange] = useState<Range>("all");
 
   const filteredChecks = useMemo(() => {
@@ -112,19 +137,26 @@ export function PriceHistoryChart({ checks, currency }: PriceHistoryChartProps) 
     return checks.filter((c) => new Date(c.checked_at).getTime() >= cutoff);
   }, [checks, range]);
 
-  const chartData = useMemo(
-    () =>
-      filteredChecks
-        .filter((c) => c.price !== null)
-        .map((c) => ({
-          date: c.checked_at,
-          dateLabel: formatDateShort(c.checked_at),
-          price: c.price,
-          stockStatus: c.stock_status,
-          currency,
-        })),
-    [filteredChecks, currency]
-  );
+  const chartData = useMemo(() => {
+    // Build a map of anomaly timestamps for quick lookup
+    const anomalyMap = new Map<string, Anomaly>();
+    for (const a of anomalies) {
+      // Match anomaly to nearest check (same day)
+      const dateKey = a.detected_at.slice(0, 10);
+      anomalyMap.set(dateKey, a);
+    }
+
+    return filteredChecks
+      .filter((c) => c.price !== null)
+      .map((c) => ({
+        date: c.checked_at,
+        dateLabel: formatDateShort(c.checked_at),
+        price: c.price,
+        stockStatus: c.stock_status,
+        currency,
+        anomaly: anomalyMap.get(c.checked_at.slice(0, 10)),
+      }));
+  }, [filteredChecks, currency, anomalies]);
 
   // Summary stats
   const stats = useMemo(() => {
@@ -254,6 +286,12 @@ export function PriceHistoryChart({ checks, currency }: PriceHistoryChartProps) 
                   <span className="text-[11px] text-slate-500">{label}</span>
                 </div>
               ))}
+              {anomalies.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-2.5 rounded-full bg-rose-500" />
+                  <span className="text-[11px] text-slate-500">Anomaly</span>
+                </div>
+              )}
             </div>
           </>
         )}

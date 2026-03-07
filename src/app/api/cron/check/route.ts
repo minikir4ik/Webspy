@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { scrapeProduct } from "@/lib/scrapers/router";
 import { evaluateAlerts } from "@/lib/alerts/evaluator";
+import { detectAnomalies } from "@/lib/anomaly-detector";
 import type { TrackedProduct, PriceCheck } from "@/lib/types/database";
 
 function delay(ms: number) {
@@ -9,7 +10,6 @@ function delay(ms: number) {
 }
 
 export async function GET(request: Request) {
-  // Verify cron secret
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
@@ -20,14 +20,14 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   const now = new Date().toISOString();
 
-  // Fetch products that are due for checking
+  // Fetch products due for checking — up to 50
   const { data: products, error: queryError } = await admin
     .from("tracked_products")
     .select("*")
     .eq("status", "active")
     .lte("next_check_at", now)
     .order("next_check_at", { ascending: true })
-    .limit(20);
+    .limit(50);
 
   if (queryError) {
     console.error("[cron] Query error:", queryError.message);
@@ -35,13 +35,15 @@ export async function GET(request: Request) {
   }
 
   if (!products || products.length === 0) {
-    return NextResponse.json({ checked: 0, succeeded: 0, failed: 0 });
+    console.log("[cron] No products due for checking");
+    return NextResponse.json({ checked: 0, succeeded: 0, failed: 0, alerts_sent: 0 });
   }
 
   console.log(`[cron] Processing ${products.length} products`);
 
   let succeeded = 0;
   let failed = 0;
+  let alertsSent = 0;
 
   for (const product of products as TrackedProduct[]) {
     const result = await scrapeProduct(product.url, product.platform);
@@ -64,7 +66,7 @@ export async function GET(request: Request) {
       // Get user's check interval
       const { data: profile } = await admin
         .from("profiles")
-        .select("check_interval_minutes")
+        .select("check_interval_minutes, email")
         .eq("id", product.user_id)
         .single();
 
@@ -90,7 +92,7 @@ export async function GET(request: Request) {
         })
         .eq("id", product.id);
 
-      // Evaluate alerts
+      // Build new check object for evaluation
       const newCheck: PriceCheck = {
         id: "",
         product_id: product.id,
@@ -116,15 +118,25 @@ export async function GET(request: Request) {
           ? (prevChecks[1] as PriceCheck)
           : null;
 
+      // Always evaluate alerts
       try {
         const triggered = await evaluateAlerts(product, newCheck, previousCheck);
         if (triggered.length > 0) {
-          console.log(
-            `[cron] Triggered ${triggered.length} alert(s) for ${product.product_name || product.url}`
-          );
+          alertsSent += triggered.length;
         }
+        console.log(
+          `[cron] Checked ${product.product_name || product.url}: price=${result.price}, stock=${result.stockStatus}, alerts_triggered=${triggered.length}`
+        );
       } catch (err) {
         console.error("[cron] Alert evaluation error:", err);
+      }
+
+      // Anomaly detection
+      try {
+        const userEmail = (profile as { email?: string } | null)?.email ?? null;
+        await detectAnomalies(product, newCheck, userEmail);
+      } catch (err) {
+        console.error("[cron] Anomaly detection error:", err);
       }
 
       succeeded++;
@@ -139,20 +151,23 @@ export async function GET(request: Request) {
         })
         .eq("id", product.id);
 
+      console.log(
+        `[cron] Checked ${product.product_name || product.url}: FAILED (${newFailures} consecutive)`
+      );
       failed++;
     }
 
-    // Rate limit delay
     await delay(500);
   }
 
   console.log(
-    `[cron] Done: ${succeeded} succeeded, ${failed} failed out of ${products.length}`
+    `[cron] Run complete: checked=${succeeded + failed}, succeeded=${succeeded}, failed=${failed}, alerts_sent=${alertsSent}`
   );
 
   return NextResponse.json({
     checked: succeeded + failed,
     succeeded,
     failed,
+    alerts_sent: alertsSent,
   });
 }

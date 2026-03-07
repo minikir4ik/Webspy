@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resend, fromEmail } from "@/lib/resend";
+import Anthropic from "@anthropic-ai/sdk";
 
 const BASE_URL = process.env.NEXT_PUBLIC_VERCEL_URL
   ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
@@ -18,7 +19,37 @@ function formatCurrency(price: number, currency: string): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(price);
 }
 
-function buildDigestHtml(date: string, totalChecked: number, totalChanges: number, topChanges: PriceChange[]): string {
+async function generateAiSummary(totalChecked: number, priceChanges: PriceChange[]): Promise<string | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || apiKey === "your-anthropic-api-key-here") return null;
+
+  try {
+    const anthropic = new Anthropic({ apiKey });
+    const context = JSON.stringify({
+      total_checked: totalChecked,
+      changes: priceChanges.map((c) => ({
+        product: c.productName,
+        from: c.oldPrice,
+        to: c.newPrice,
+        change: c.changePercent.toFixed(1) + "%",
+      })),
+    });
+
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 150,
+      system: "You are a concise competitive intelligence analyst. Write a 2-3 sentence summary of the overnight market activity for an e-commerce seller. Be specific with product names and numbers. No markdown.",
+      messages: [{ role: "user", content: `Overnight data:\n${context}` }],
+    });
+
+    return response.content[0].type === "text" ? response.content[0].text : null;
+  } catch (err) {
+    console.error("[digest] AI summary error:", err);
+    return null;
+  }
+}
+
+function buildDigestHtml(date: string, totalChecked: number, totalChanges: number, topChanges: PriceChange[], aiSummary?: string | null): string {
   const changesRows = topChanges.map(c => {
     const isDown = c.changePercent < 0;
     const color = isDown ? "#16a34a" : "#e11d48";
@@ -52,6 +83,10 @@ function buildDigestHtml(date: string, totalChecked: number, totalChanges: numbe
 <div style="padding:32px">
 <h1 style="font-size:18px;font-weight:600;color:#1e293b;margin:0 0 4px">Daily Digest</h1>
 <p style="font-size:13px;color:#94a3b8;margin:0 0 24px">${date}</p>
+${aiSummary ? `<div style="background:#f0f0ff;border-left:3px solid #6366f1;padding:12px 16px;border-radius:0 8px 8px 0;margin-bottom:24px">
+<div style="font-size:11px;color:#6366f1;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">AI Summary</div>
+<p style="font-size:13px;color:#475569;line-height:1.5;margin:0">${aiSummary}</p>
+</div>` : ""}
 <div style="display:flex;gap:16px;margin-bottom:24px">
 <div style="flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center">
 <div style="font-size:24px;font-weight:700;color:#1e293b">${totalChecked}</div>
@@ -172,12 +207,15 @@ export async function GET(request: Request) {
 
       if (totalChecked === 0) continue;
 
+      // Generate AI summary for this user's data
+      const aiSummary = await generateAiSummary(totalChecked, priceChanges);
+
       try {
         const { error } = await resend.emails.send({
           from: fromEmail,
           to: p.email,
           subject: `📊 WebSpy Daily Digest — ${dateStr}`,
-          html: buildDigestHtml(dateStr, totalChecked, priceChanges.length, topChanges),
+          html: buildDigestHtml(dateStr, totalChecked, priceChanges.length, topChanges, aiSummary),
         });
 
         if (error) {

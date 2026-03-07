@@ -42,9 +42,8 @@ export function AddProductDialog({ projectId }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [detectedPlatform, setDetectedPlatform] = useState<Platform | null>(
-    null
-  );
+  const [detectedPlatform, setDetectedPlatform] = useState<Platform | null>(null);
+  const [isOwnProduct, setIsOwnProduct] = useState(false);
   const router = useRouter();
 
   const handleUrlChange = useCallback(
@@ -71,6 +70,7 @@ export function AddProductDialog({ projectId }: AddProductDialogProps) {
 
     const formData = new FormData(e.currentTarget);
     formData.set("project_id", projectId);
+    formData.set("is_own_product", isOwnProduct ? "true" : "false");
     const result = await addProduct(formData);
 
     if (result.error) {
@@ -82,11 +82,12 @@ export function AddProductDialog({ projectId }: AddProductDialogProps) {
     setOpen(false);
     setLoading(false);
     setDetectedPlatform(null);
+    setIsOwnProduct(false);
     router.refresh();
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setError(null); setDetectedPlatform(null); } }}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setError(null); setDetectedPlatform(null); setIsOwnProduct(false); } }}>
       <DialogTrigger asChild>
         <Button className="gradient-primary border-0 text-white shadow-sm hover:opacity-90">
           <Plus className="mr-2 h-4 w-4" />
@@ -97,7 +98,7 @@ export function AddProductDialog({ projectId }: AddProductDialogProps) {
         <DialogHeader>
           <DialogTitle>Add Tracked Product</DialogTitle>
           <DialogDescription>
-            Enter a competitor product URL to start monitoring.
+            Enter a product URL to start monitoring.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -107,6 +108,34 @@ export function AddProductDialog({ projectId }: AddProductDialogProps) {
                 {error}
               </div>
             )}
+
+            {/* Own product toggle */}
+            <div className="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isOwnProduct}
+                onClick={() => setIsOwnProduct(!isOwnProduct)}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors ${
+                  isOwnProduct ? "bg-indigo-500" : "bg-slate-200"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                    isOwnProduct ? "translate-x-4" : "translate-x-0.5"
+                  } mt-0.5`}
+                />
+              </button>
+              <div>
+                <p className="text-sm font-medium text-slate-900">This is my product</p>
+                <p className="text-xs text-slate-500">
+                  {isOwnProduct
+                    ? "Tracking your own product for comparison"
+                    : "Tracking a competitor's product"}
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="url">Product URL</Label>
               <div className="flex items-center gap-2">
@@ -137,21 +166,23 @@ export function AddProductDialog({ projectId }: AddProductDialogProps) {
                 placeholder="e.g., Nike Air Max 90"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="my_price">My Price (optional)</Label>
-              <Input
-                id="my_price"
-                name="my_price"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="Your price for comparison"
-              />
-              <p className="text-xs text-slate-500">
-                Enter your own price so we can alert you when a competitor
-                undercuts you.
-              </p>
-            </div>
+            {!isOwnProduct && (
+              <div className="space-y-2">
+                <Label htmlFor="my_price">My Price (optional)</Label>
+                <Input
+                  id="my_price"
+                  name="my_price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Your price for comparison"
+                />
+                <p className="text-xs text-slate-500">
+                  Enter your own price so we can alert you when a competitor
+                  undercuts you.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button

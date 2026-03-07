@@ -17,6 +17,7 @@ import {
   ArrowUp,
   Package,
 } from "lucide-react";
+import { PricePositionWidget } from "@/components/dashboard/price-position-widget";
 import type { AlertHistory, TrackedProduct, PriceCheck } from "@/lib/types/database";
 
 function getGreeting(): string {
@@ -126,6 +127,8 @@ export default async function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      <PricePositionWidget products={products} />
 
       {biggestChanges.length > 0 && (
         <Card className="shadow-sm">

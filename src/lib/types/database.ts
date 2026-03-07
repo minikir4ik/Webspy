@@ -11,6 +11,8 @@ export type AlertRuleType =
   | "stock_change"
   | "competitor_undercuts_me";
 export type NotifyChannel = "email";
+export type AnomalyType = "price_spike" | "price_crash" | "unusual_stock_change";
+export type AnomalySeverity = "low" | "medium" | "high";
 
 export interface Profile {
   id: string;
@@ -50,6 +52,7 @@ export interface TrackedProduct {
   status: ProductStatus;
   consecutive_failures: number;
   extraction_config: Record<string, unknown>;
+  is_own_product: boolean;
   created_at: string;
 }
 
@@ -88,5 +91,24 @@ export interface AlertHistory {
   old_value: string | null;
   new_value: string | null;
   channels_sent: string[] | null;
+  created_at: string;
+}
+
+export interface Anomaly {
+  id: string;
+  product_id: string;
+  user_id: string;
+  type: AnomalyType;
+  severity: AnomalySeverity;
+  description: string;
+  detected_at: string;
+  is_read: boolean;
+}
+
+export interface SavedComparison {
+  id: string;
+  user_id: string;
+  name: string;
+  product_ids: string[];
   created_at: string;
 }

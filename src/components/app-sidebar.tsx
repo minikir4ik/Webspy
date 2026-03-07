@@ -7,6 +7,8 @@ import {
   Bell,
   Settings,
   Eye,
+  BarChart3,
+  Sparkles,
 } from "lucide-react";
 import { AccountSwitcher } from "@/components/account-switcher";
 import {
@@ -26,6 +28,8 @@ import {
 const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Projects", href: "/projects", icon: FolderKanban },
+  { title: "Compare", href: "/compare", icon: BarChart3 },
+  { title: "AI Insights", href: "/insights", icon: Sparkles },
   { title: "Alerts", href: "/alerts", icon: Bell },
   { title: "Settings", href: "/settings", icon: Settings },
 ];

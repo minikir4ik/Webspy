@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { AddProductDialog } from "@/components/products/add-product-dialog";
 import { ProductCard } from "@/components/products/product-card";
 import { AutoScrapeProject } from "@/components/products/auto-scrape-project";
+import { MarketPositionCard } from "@/components/projects/market-position-card";
+import { CompareView } from "@/components/projects/compare-view";
 import { ChevronRight, Package } from "lucide-react";
 import type { Project, TrackedProduct } from "@/lib/types/database";
 
@@ -36,6 +38,8 @@ export default async function ProjectDetailPage({
     .order("created_at", { ascending: false });
 
   const productList = (products as TrackedProduct[] | null) ?? [];
+  const ownProducts = productList.filter((p) => p.is_own_product);
+  const competitorProducts = productList.filter((p) => !p.is_own_product);
 
   return (
     <div className="space-y-8">
@@ -68,6 +72,14 @@ export default async function ProjectDetailPage({
         <AddProductDialog projectId={id} />
       </div>
 
+      {/* Market Position (only if there's at least 1 own + 1 competitor) */}
+      {ownProducts.length > 0 && competitorProducts.length > 0 && (
+        <MarketPositionCard
+          ownProducts={ownProducts}
+          competitorProducts={competitorProducts}
+        />
+      )}
+
       {productList.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white py-16 px-6">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50 mb-4">
@@ -82,15 +94,44 @@ export default async function ProjectDetailPage({
           <AddProductDialog projectId={id} />
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {productList.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
+        <>
+          {/* Own Products Section */}
+          {ownProducts.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                Your Products ({ownProducts.length})
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {ownProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} projectId={id} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Competitor Products Section */}
+          {competitorProducts.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                Competitor Products ({competitorProducts.length})
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {competitorProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} projectId={id} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Compare view: table + bar chart */}
+          {ownProducts.length > 0 && competitorProducts.length > 0 && (
+            <CompareView
+              ownProducts={ownProducts}
+              competitorProducts={competitorProducts}
               projectId={id}
             />
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -98,7 +98,9 @@ export function ProductCard({ product, projectId }: ProductCardProps) {
   return (
     <>
       <Card
-        className="group cursor-pointer shadow-sm transition-lift hover:shadow-md"
+        className={`group cursor-pointer shadow-sm transition-lift hover:shadow-md ${
+          product.is_own_product ? "border-blue-300 ring-1 ring-blue-100" : ""
+        }`}
         onClick={() =>
           router.push(`/projects/${projectId}/products/${product.id}`)
         }
@@ -115,6 +117,11 @@ export function ProductCard({ product, projectId }: ProductCardProps) {
               <Badge variant="secondary" className={platform.className + " text-[11px] h-5 px-1.5"}>
                 {platform.label}
               </Badge>
+              {product.is_own_product && (
+                <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-0 text-[11px] h-5 px-1.5">
+                  Your Product
+                </Badge>
+              )}
               {stock && (
                 <Badge variant="secondary" className={stock.className + " text-[11px] h-5 px-1.5"}>
                   {stock.label}
